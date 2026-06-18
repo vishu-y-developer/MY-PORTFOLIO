@@ -29,19 +29,16 @@ const ldInterval = setInterval(() => {
 function init(){
     particles();
     scrollReveal();
-    navScroll();
     mobileMenu();
-    smoothScroll();
     countUp();
     projGlow();
     customCursor();
-    scrollProgress();
     magneticElements();
     tiltCards();
-    parallaxInit();
     dropDowns();
     initRoadmapAccordions();
     generateStars();
+    initLenisAndScroll();
 }
 
 /* ── Particles ── */
@@ -151,26 +148,22 @@ function particles(){
     });
 }
 
-/* ── Scroll Reveal ── */
+/* ── Scroll Reveal & Intersection Glow ── */
 function scrollReveal(){
     const els=document.querySelectorAll('.sr');
     if(!els.length) return;
-    const io=new IntersectionObserver(entries=>{
+    const io=new IntersectionObserver((entries,obs)=>{
         entries.forEach(e=>{
-            if(e.isIntersecting){e.target.classList.add('vis', 'visible');io.unobserve(e.target)}
+            if(e.isIntersecting){
+                e.target.classList.add('vis');
+                // Temporary glow reveal
+                e.target.classList.add('glow-reveal');
+                setTimeout(() => e.target.classList.remove('glow-reveal'), 800);
+                obs.unobserve(e.target);
+            }
         });
-    },{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+    },{threshold:.15, rootMargin: '0px 0px -50px 0px'});
     els.forEach(el=>io.observe(el));
-}
-
-/* ── Nav Scroll ── */
-function navScroll(){
-    const nav=document.getElementById('nav');
-    if(!nav) return;
-    let tick=false;
-    addEventListener('scroll',()=>{
-        if(!tick){requestAnimationFrame(()=>{nav.classList.toggle('scrolled',scrollY>40);tick=false});tick=true}
-    },{passive:true});
 }
 
 /* ── Mobile Menu ── */
@@ -185,16 +178,6 @@ function mobileMenu(){
     menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
         btn.classList.remove('on');menu.classList.remove('open');document.body.style.overflow='';
     }));
-}
-
-/* ── Smooth Scroll ── */
-function smoothScroll(){
-    document.querySelectorAll('a[href^="#"]').forEach(a=>{
-        a.addEventListener('click',e=>{
-            const t=document.querySelector(a.getAttribute('href'));
-            if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})}
-        });
-    });
 }
 
 /* ── Count Up ── */
@@ -263,19 +246,6 @@ function customCursor() {
     });
 }
 
-/* 2. Scroll Progress Bar */
-function scrollProgress() {
-    const bar = document.getElementById('scrollProgress');
-    if(!bar) return;
-    
-    window.addEventListener('scroll', () => {
-        const scrollTop = window.scrollY;
-        const docHeight = document.body.scrollHeight - window.innerHeight;
-        const scrolled = (scrollTop / docHeight) * 100;
-        bar.style.width = scrolled + '%';
-    }, {passive: true});
-}
-
 /* 3. Magnetic Buttons */
 function magneticElements() {
     // Buttons to apply magnetic effect
@@ -297,66 +267,54 @@ function magneticElements() {
     });
 }
 
-/* 4. 3D Tilt Effect for Cards */
+/* 4. Premium 3D Tilt Effect for Cards */
 function tiltCards() {
-    const cards = document.querySelectorAll('.card, .srv-card, .proj, .gh-card, .li-card, .stat');
+    const cards = document.querySelectorAll('.card, .srv-card, .proj, .gh-card, .li-card, .stat, .cc');
     
     cards.forEach(card => {
-        // Prevent default CSS hover translate clashing with our 3D transform by using perspective
+        let isHovered = false;
+        let x = 0, y = 0;
+        
+        card.addEventListener('mouseenter', () => {
+            isHovered = true;
+            card.style.transition = 'transform 0.1s ease-out, box-shadow 0.3s ease';
+        });
+        
         card.addEventListener('mousemove', (e) => {
+            if(!isHovered) return;
             const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            x = e.clientX - rect.left;
+            y = e.clientY - rect.top;
             
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
             
-            const rotateX = ((y - centerY) / centerY) * -5; // Max 5 deg
-            const rotateY = ((x - centerX) / centerX) * 5;  // Max 5 deg
+            // Subtle 3D rotation (max 4 degrees)
+            const rotateX = ((y - centerY) / centerY) * -4; 
+            const rotateY = ((x - centerX) / centerX) * 4;  
             
-            // For .proj, keep the glow variables active
-            if(card.classList.contains('proj')) {
+            // Dynamic glare using the before pseudo-element or CSS variables
+            if(card.classList.contains('proj') || card.classList.contains('card')) {
                 card.style.setProperty('--mx', (x / rect.width * 100) + '%');
                 card.style.setProperty('--my', (y / rect.height * 100) + '%');
             }
             
-            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-            // Ensure shadow reacts dynamically if possible
+            card.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
         });
         
         card.addEventListener('mouseleave', () => {
-            card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+            isHovered = false;
+            card.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+            card.style.transform = `perspective(1200px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+            if(card.classList.contains('proj') || card.classList.contains('card')) {
+                card.style.setProperty('--mx', '50%');
+                card.style.setProperty('--my', '50%');
+            }
         });
     });
 }
 
-/* 5. Subtle Parallax for Background Elements */
-function parallaxInit() {
-    const glows = document.querySelectorAll('.hero-glow');
-    const titles = document.querySelectorAll('.sec-title');
-    
-    window.addEventListener('scroll', () => {
-        const scrolled = window.scrollY;
-        
-        // Hero glows move slightly
-        glows.forEach((glow, index) => {
-            const speed = (index + 1) * 0.15;
-            // Retain original animation by overriding translateY selectively? 
-            // It's better to just translate them slightly in a wrapper, or we can just apply top offset
-            // Instead, we'll parallax the section titles slightly
-        });
-        
-        // Section titles move at a different rate
-        titles.forEach(title => {
-            const rect = title.getBoundingClientRect();
-            // Only parallax if visible
-            if(rect.top < window.innerHeight && rect.bottom > 0) {
-                const distance = window.innerHeight - rect.top;
-                title.style.transform = `translateY(${distance * -0.05}px)`;
-            }
-        });
-    }, {passive: true});
-}
+
 
 /* 6. Timeline Dropdowns */
 function dropDowns() {
@@ -399,4 +357,101 @@ function generateStars() {
 
 /* ── Util ── */
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+/* ── Centralized High-Performance Scroll Architecture ── */
+function initLenisAndScroll() {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let lenis = null;
+
+    // Cache elements to avoid querying DOM during scroll
+    const nav = document.getElementById('nav');
+    const stream = document.getElementById('neuralStream');
+    const spark = document.getElementById('neuralSpark');
+    const s1 = document.querySelector('.stars-1'), s2 = document.querySelector('.stars-2'), s3 = document.querySelector('.stars-3'), nebula = document.querySelector('.nebula');
+    const titles = document.querySelectorAll('.sec-title');
+
+    function updateScroll(scrollY) {
+        // Nav Background
+        if(nav) nav.classList.toggle('scrolled', scrollY > 40);
+        
+        // Neural Stream Tracking
+        if(stream && spark) {
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+            const scrolled = Math.max(0, Math.min(1, scrollY / docHeight));
+            const maxScroll = stream.offsetHeight - spark.offsetHeight;
+            spark.style.transform = `translateX(-50%) translateY(${scrolled * maxScroll}px)`;
+        }
+
+        if (prefersReducedMotion) return;
+
+        // Cinematic Deep Space Parallax
+        if(s1) s1.style.transform = `translateY(${scrollY * -0.05}px)`;
+        if(s2) s2.style.transform = `translateY(${scrollY * -0.1}px)`;
+        if(s3) s3.style.transform = `translateY(${scrollY * -0.15}px)`;
+        if(nebula) nebula.style.transform = `translateY(${scrollY * -0.03}px) scale(1.1)`;
+        
+        titles.forEach(title => {
+            const rect = title.getBoundingClientRect();
+            if(rect.top < window.innerHeight && rect.bottom > 0) {
+                const distance = window.innerHeight - rect.top;
+                title.style.transform = `translateY(${distance * -0.04}px)`;
+            }
+        });
+    }
+
+    if (!prefersReducedMotion && typeof Lenis !== 'undefined') {
+        lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical',
+            gestureDirection: 'vertical',
+            smooth: true,
+            mouseMultiplier: 1,
+            smoothTouch: false,
+            touchMultiplier: 2,
+            infinite: false,
+        });
+
+        lenis.on('scroll', (e) => {
+            updateScroll(e.scroll);
+        });
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+    } else {
+        // Fallback to Native Scroll (still optimized)
+        let tick = false;
+        window.addEventListener('scroll', () => {
+            if(!tick) {
+                requestAnimationFrame(() => {
+                    updateScroll(window.scrollY);
+                    tick = false;
+                });
+                tick = true;
+            }
+        }, {passive: true});
+    }
+
+    // Anchor Links setup (with Lenis if available, else native)
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            const target = document.querySelector(a.getAttribute('href'));
+            if(target) {
+                e.preventDefault();
+                if(lenis) {
+                    lenis.scrollTo(target, { offset: -60, duration: 1.2 });
+                } else {
+                    target.scrollIntoView({behavior:'smooth',block:'start'});
+                }
+            }
+        });
+    });
+
+    // Run once on load
+    updateScroll(window.scrollY);
+    window.addEventListener('resize', () => updateScroll(window.scrollY));
+}
+
 })();
