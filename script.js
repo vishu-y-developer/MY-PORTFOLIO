@@ -6,17 +6,27 @@
 'use strict';
 
 /* ── Loader ── */
-window.addEventListener('load',()=>{
-    setTimeout(()=>{
-        document.getElementById('loader').classList.add('done');
-        document.body.style.overflow='';
-        init();
-    },1400);
-});
 document.body.style.overflow='hidden';
+let ldProgress = 0;
+const ldInterval = setInterval(() => {
+    ldProgress += Math.floor(Math.random() * 15) + 3;
+    if(ldProgress >= 100) {
+        ldProgress = 100;
+        clearInterval(ldInterval);
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            if(loader) loader.classList.add('done');
+            document.body.style.overflow='';
+            init();
+        }, 400);
+    }
+    const ldNum = document.getElementById('ldNum');
+    const ldFill = document.getElementById('ldFill');
+    if(ldNum) ldNum.textContent = ldProgress;
+    if(ldFill) ldFill.style.width = ldProgress + '%';
+}, 60);
 
 function init(){
-    themeToggle();
     particles();
     scrollReveal();
     navScroll();
@@ -30,21 +40,8 @@ function init(){
     tiltCards();
     parallaxInit();
     dropDowns();
-}
-
-/* ── Theme Toggle ── */
-function themeToggle(){
-    const btn=document.getElementById('themeBtn');
-    const html=document.documentElement;
-    const saved=localStorage.getItem('uy-theme');
-    if(saved) html.setAttribute('data-theme',saved);
-
-    btn.addEventListener('click',()=>{
-        const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
-        html.setAttribute('data-theme',next);
-        localStorage.setItem('uy-theme',next);
-        updateParticleColors(next);
-    });
+    initRoadmapAccordions();
+    generateStars();
 }
 
 /* ── Particles ── */
@@ -160,7 +157,7 @@ function scrollReveal(){
     if(!els.length) return;
     const io=new IntersectionObserver(entries=>{
         entries.forEach(e=>{
-            if(e.isIntersecting){e.target.classList.add('vis');io.unobserve(e.target)}
+            if(e.isIntersecting){e.target.classList.add('vis', 'visible');io.unobserve(e.target)}
         });
     },{threshold:.1,rootMargin:'0px 0px -40px 0px'});
     els.forEach(el=>io.observe(el));
@@ -388,6 +385,16 @@ function dropDowns() {
             }
         });
     });
+}
+
+/* ── Night Sky Stars ── */
+function generateStars() {
+    const s1 = document.querySelector('.stars-1'), s2 = document.querySelector('.stars-2'), s3 = document.querySelector('.stars-3');
+    if(!s1 || !s2 || !s3) return;
+    const make = (n) => Array.from({length:n}).map(()=>`${Math.random()*100}vw ${Math.random()*100}vh #fff`).join(',');
+    s1.style.boxShadow = make(250);
+    s2.style.boxShadow = make(100);
+    s3.style.boxShadow = make(40);
 }
 
 /* ── Util ── */
