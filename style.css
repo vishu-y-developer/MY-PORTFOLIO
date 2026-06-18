@@ -261,14 +261,31 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border)}
 @media(max-width:768px){
     .nav-links{display:none}
     .burger{display:flex}
-    #hero h1{font-size:clamp(2.8rem,12vw,4.2rem)}
-    .hero-btns{flex-direction:column;align-items:stretch}
-    .hero-btns a{justify-content:center}
+    #hero h1{font-size:clamp(2.5rem,10vw,3.5rem); line-height: 1.1;}
+    .hero-role{font-size:1.1rem; letter-spacing:1px;}
+    p.lead{font-size:1.1rem; line-height: 1.6;}
+    .hero-btns{flex-direction:column;align-items:stretch; gap:12px;}
+    .hero-btns a{justify-content:center; min-height: 48px; padding: 14px 24px; font-size: 1rem;}
     .skills-grid{grid-template-columns:1fr}
     .card-wide{grid-column:1}
-    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .stats-grid{grid-template-columns:1fr; gap: 1rem;}
     .srv-grid{grid-template-columns:1fr}
     .contact-grid{grid-template-columns:1fr}
+    
+    /* Optimize mobile background */
+    #particles { display: none !important; }
+    .space-bg { display: none !important; }
+    
+    /* Static premium glow fallback for mobile */
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; height: 100vh;
+        background: radial-gradient(circle at 50% 10%, rgba(139,92,246,0.12) 0%, transparent 60%), 
+                    radial-gradient(circle at 50% 90%, rgba(6,182,212,0.1) 0%, transparent 50%);
+        z-index: -2;
+        pointer-events: none;
+    }
 }
 @media(max-width:480px){
     .sec-title{font-size:clamp(1.75rem,8vw,2.2rem)}
