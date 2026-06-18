@@ -27,18 +27,40 @@ const ldInterval = setInterval(() => {
 }, 60);
 
 function init(){
-    particles();
-    scrollReveal();
+    const IS_MOBILE = window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches;
+    
+    // Core logic that runs everywhere
     mobileMenu();
-    countUp();
-    projGlow();
-    customCursor();
-    magneticElements();
-    tiltCards();
     dropDowns();
-    generateStars();
     initTouchEffects();
-    initLenisAndScroll();
+    particles();
+    generateStars();
+    
+    if (!IS_MOBILE) {
+        scrollReveal();
+        countUp();
+        projGlow();
+        customCursor();
+        magneticElements();
+        tiltCards();
+        initLenisAndScroll();
+    } else {
+        // Fallbacks for mobile
+        scrollReveal(); // Let's enable scrollReveal on mobile too
+        countUp(); // Enable countUp on mobile
+        
+        const nav = document.getElementById('nav');
+        let tick = false;
+        window.addEventListener('scroll', () => {
+            if (!tick) {
+                requestAnimationFrame(() => {
+                    if(nav) nav.classList.toggle('scrolled', window.scrollY > 40);
+                    tick = false;
+                });
+                tick = true;
+            }
+        }, {passive: true});
+    }
 }
 
 /* ── Particles ── */

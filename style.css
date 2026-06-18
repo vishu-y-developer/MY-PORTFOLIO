@@ -271,21 +271,6 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border)}
     .stats-grid{grid-template-columns:1fr; gap: 1rem;}
     .srv-grid{grid-template-columns:1fr}
     .contact-grid{grid-template-columns:1fr}
-    
-    /* Optimize mobile background */
-    #particles { display: none !important; }
-    .space-bg { display: none !important; }
-    
-    /* Static premium glow fallback for mobile */
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0; left: 0; right: 0; height: 100vh;
-        background: radial-gradient(circle at 50% 10%, rgba(139,92,246,0.12) 0%, transparent 60%), 
-                    radial-gradient(circle at 50% 90%, rgba(6,182,212,0.1) 0%, transparent 50%);
-        z-index: -2;
-        pointer-events: none;
-    }
 }
 @media(max-width:480px){
     .sec-title{font-size:clamp(1.75rem,8vw,2.2rem)}
