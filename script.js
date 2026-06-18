@@ -37,6 +37,7 @@ function init(){
     tiltCards();
     dropDowns();
     generateStars();
+    initTouchEffects();
     initLenisAndScroll();
 }
 
@@ -135,6 +136,20 @@ function mobileMenu(){
     menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
         btn.classList.remove('on');menu.classList.remove('open');document.body.style.overflow='';
     }));
+}
+
+/* ── Mobile Touch Ripple ── */
+function initTouchEffects() {
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+    document.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const ripple = document.createElement('div');
+        ripple.className = 'touch-ripple';
+        ripple.style.left = touch.clientX + 'px';
+        ripple.style.top = touch.clientY + 'px';
+        document.body.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    }, {passive: true});
 }
 
 /* ── Count Up ── */
