@@ -36,7 +36,6 @@ function init(){
     magneticElements();
     tiltCards();
     dropDowns();
-    initRoadmapAccordions();
     generateStars();
     initLenisAndScroll();
 }
@@ -45,107 +44,65 @@ function init(){
 let pColor='129,140,248', pColor2='192,132,252';
 
 function updateParticleColors(theme){
-    if(theme==='light'){
-        pColor='99,102,241'; pColor2='168,85,247';
-    } else {
-        pColor='129,140,248'; pColor2='192,132,252';
-    }
+    pColor=theme==='light'?'99,102,241':'129,140,248';
+    pColor2=theme==='light'?'168,85,247':'192,132,252';
 }
+
+// Make particle update global so we can call it from master loop
+let particleUpdateFn = null;
+let particlesVisible = true;
 
 function particles(){
     const canvas=document.getElementById('particles');
     if(!canvas) return;
     const ctx=canvas.getContext('2d');
-    const hero=canvas.parentElement;
-    let W,H,pts=[],raf;
-    const N=innerWidth<768?30:55;
-    const DIST=innerWidth<768?100:145;
-    let mx,my;
-
-    updateParticleColors(document.documentElement.getAttribute('data-theme')||'dark');
+    let width,height,particles=[];
+    
+    // Reduce particle count significantly for performance
+    const count=window.innerWidth < 768 ? 15 : 30;
 
     function resize(){
-        const rect=hero.getBoundingClientRect();
-        W=rect.width; H=rect.height;
-        const dpr=Math.min(devicePixelRatio,2);
-        canvas.width=W*dpr;
-        canvas.height=H*dpr;
-        ctx.setTransform(dpr,0,0,dpr,0,0);
+        width=canvas.width=window.innerWidth;
+        height=canvas.height=window.innerHeight;
     }
+    window.addEventListener('resize',resize);
     resize();
-    addEventListener('resize',debounce(resize,200));
 
-    hero.addEventListener('mousemove',e=>{
-        const r=hero.getBoundingClientRect();
-        mx=e.clientX-r.left; my=e.clientY-r.top;
-    });
-    hero.addEventListener('mouseleave',()=>{mx=my=undefined});
-
-    class P{
+    class Particle{
         constructor(){
-            this.x=Math.random()*W;
-            this.y=Math.random()*H;
-            this.vx=(Math.random()-.5)*.3;
-            this.vy=(Math.random()-.5)*.3;
-            this.r=Math.random()*1.6+.5;
-            this.o=Math.random()*.35+.12;
+            this.x=Math.random()*width;
+            this.y=Math.random()*height;
+            this.vx=(Math.random()-.5)*0.2;
+            this.vy=(Math.random()-.5)*0.2;
+            this.size=Math.random()*1.5+.5;
+            this.c=Math.random()>.5?pColor:pColor2;
         }
         update(){
-            this.x+=this.vx; this.y+=this.vy;
-            if(this.x<0||this.x>W) this.vx*=-1;
-            if(this.y<0||this.y>H) this.vy*=-1;
-            if(mx!==undefined){
-                const dx=mx-this.x,dy=my-this.y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<180){const f=(180-d)/180*.007;this.vx+=dx*f;this.vy+=dy*f}
-            }
-            this.vx*=.996; this.vy*=.996;
-        }
-        draw(){
+            this.x+=this.vx;this.y+=this.vy;
+            if(this.x<0||this.x>width)this.vx*=-1;
+            if(this.y<0||this.y>height)this.vy*=-1;
+            ctx.fillStyle=`rgba(${this.c}, ${Math.random()*0.3+0.1})`;
             ctx.beginPath();
-            ctx.arc(this.x,this.y,this.r,0,6.283);
-            ctx.fillStyle=`rgba(${pColor},${this.o})`;
+            ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
             ctx.fill();
         }
     }
+    for(let i=0;i<count;i++) particles.push(new Particle());
 
-    for(let i=0;i<N;i++) pts.push(new P());
+    particleUpdateFn = () => {
+        if (!particlesVisible) return;
+        ctx.clearRect(0,0,width,height);
+        particles.forEach(p=>p.update());
+    };
 
-    function loop(){
-        ctx.clearRect(0,0,W,H);
-        for(let i=0;i<pts.length;i++){
-            pts[i].update(); pts[i].draw();
-            for(let j=i+1;j<pts.length;j++){
-                const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d2=dx*dx+dy*dy;
-                if(d2<DIST*DIST){
-                    ctx.beginPath();
-                    ctx.moveTo(pts[i].x,pts[i].y);
-                    ctx.lineTo(pts[j].x,pts[j].y);
-                    ctx.strokeStyle=`rgba(${pColor},${(1-Math.sqrt(d2)/DIST)*.1})`;
-                    ctx.lineWidth=.5;
-                    ctx.stroke();
-                }
-            }
-        }
-        if(mx!==undefined){
-            for(let i=0;i<pts.length;i++){
-                const dx=mx-pts[i].x,dy=my-pts[i].y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<160){
-                    ctx.beginPath();
-                    ctx.moveTo(pts[i].x,pts[i].y);
-                    ctx.lineTo(mx,my);
-                    ctx.strokeStyle=`rgba(${pColor2},${(1-d/160)*.18})`;
-                    ctx.lineWidth=.6;
-                    ctx.stroke();
-                }
-            }
-        }
-        raf=requestAnimationFrame(loop);
+    // Pause particles when hero is out of view
+    const hero = document.getElementById('hero');
+    if (hero) {
+        const io = new IntersectionObserver(entries => {
+            particlesVisible = entries[0].isIntersecting;
+        }, { threshold: 0 });
+        io.observe(hero);
     }
-    raf=requestAnimationFrame(loop);
-
-    document.addEventListener('visibilitychange',()=>{
-        document.hidden?cancelAnimationFrame(raf):(raf=requestAnimationFrame(loop));
-    });
 }
 
 /* ── Scroll Reveal & Intersection Glow ── */
@@ -214,29 +171,34 @@ function projGlow(){
 /* ── Premium Enhancements ── */
 
 /* 1. Custom Cursor */
+let cursorUpdateFn = null;
+
 function customCursor() {
+    // Disable entirely on mobile
+    if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768) return;
+
     const dot = document.getElementById('cursorDot');
     const ring = document.getElementById('cursorRing');
     if(!dot || !ring) return;
 
-    let mouseX = 0, mouseY = 0;
-    let ringX = 0, ringY = 0;
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    let ringX = mouseX;
+    let ringY = mouseY;
 
     window.addEventListener('mousemove', (e) => {
         mouseX = e.clientX;
         mouseY = e.clientY;
-        dot.style.left = mouseX + 'px';
-        dot.style.top = mouseY + 'px';
+        document.body.style.setProperty('--cx', mouseX + 'px');
+        document.body.style.setProperty('--cy', mouseY + 'px');
     });
 
-    function render() {
-        ringX += (mouseX - ringX) * 0.2;
-        ringY += (mouseY - ringY) * 0.2;
-        ring.style.left = ringX + 'px';
-        ring.style.top = ringY + 'px';
-        requestAnimationFrame(render);
-    }
-    requestAnimationFrame(render);
+    cursorUpdateFn = () => {
+        ringX += (mouseX - ringX) * 0.25;
+        ringY += (mouseY - ringY) * 0.25;
+        document.body.style.setProperty('--rx', ringX + 'px');
+        document.body.style.setProperty('--ry', ringY + 'px');
+    };
 
     // Hover state for interactive elements
     const interactives = document.querySelectorAll('a, button, .cc, .card, .proj, .srv-card, .stat, .gh-card, .li-card');
@@ -269,11 +231,15 @@ function magneticElements() {
 
 /* 4. Premium 3D Tilt Effect for Cards */
 function tiltCards() {
+    // Disable heavy 3D tilt on mobile devices
+    if (window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches) return;
+
     const cards = document.querySelectorAll('.card, .srv-card, .proj, .gh-card, .li-card, .stat, .cc');
     
     cards.forEach(card => {
         let isHovered = false;
         let x = 0, y = 0;
+        let ticking = false;
         
         card.addEventListener('mouseenter', () => {
             isHovered = true;
@@ -286,25 +252,30 @@ function tiltCards() {
             x = e.clientX - rect.left;
             y = e.clientY - rect.top;
             
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            
-            // Subtle 3D rotation (max 4 degrees)
-            const rotateX = ((y - centerY) / centerY) * -4; 
-            const rotateY = ((x - centerX) / centerX) * 4;  
-            
-            // Dynamic glare using the before pseudo-element or CSS variables
-            if(card.classList.contains('proj') || card.classList.contains('card')) {
-                card.style.setProperty('--mx', (x / rect.width * 100) + '%');
-                card.style.setProperty('--my', (y / rect.height * 100) + '%');
+            if(!ticking) {
+                requestAnimationFrame(() => {
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    // Subtle 3D rotation (max 3 degrees for performance)
+                    const rotateX = ((y - centerY) / centerY) * -3; 
+                    const rotateY = ((x - centerX) / centerX) * 3;  
+                    
+                    if(card.classList.contains('proj') || card.classList.contains('card')) {
+                        card.style.setProperty('--mx', (x / rect.width * 100) + '%');
+                        card.style.setProperty('--my', (y / rect.height * 100) + '%');
+                    }
+                    
+                    card.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+                    ticking = false;
+                });
+                ticking = true;
             }
-            
-            card.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
         });
         
         card.addEventListener('mouseleave', () => {
             isHovered = false;
-            card.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+            card.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease';
             card.style.transform = `perspective(1200px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
             if(card.classList.contains('proj') || card.classList.contains('card')) {
                 card.style.setProperty('--mx', '50%');
@@ -345,14 +316,24 @@ function dropDowns() {
     });
 }
 
-/* ── Night Sky Stars ── */
+/* ── Dynamic Deep Space Background ── */
 function generateStars() {
-    const s1 = document.querySelector('.stars-1'), s2 = document.querySelector('.stars-2'), s3 = document.querySelector('.stars-3');
-    if(!s1 || !s2 || !s3) return;
-    const make = (n) => Array.from({length:n}).map(()=>`${Math.random()*100}vw ${Math.random()*100}vh #fff`).join(',');
-    s1.style.boxShadow = make(250);
-    s2.style.boxShadow = make(100);
-    s3.style.boxShadow = make(40);
+    // Drastically reduce star counts
+    const counts = { s1: 40, s2: 15, s3: 5 };
+    const spaceBg = document.querySelector('.space-bg');
+    if(!spaceBg) return;
+    
+    function createBoxShadows(n) {
+        let val = '';
+        for(let i=0; i<n; i++) {
+            val += `${Math.random()*100}vw ${Math.random()*100}vh #FFF${i<n-1?', ':''}`;
+        }
+        return val;
+    }
+    
+    document.querySelector('.stars-1').style.boxShadow = createBoxShadows(counts.s1);
+    document.querySelector('.stars-2').style.boxShadow = createBoxShadows(counts.s2);
+    document.querySelector('.stars-3').style.boxShadow = createBoxShadows(counts.s3);
 }
 
 /* ── Util ── */
@@ -360,6 +341,7 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 /* ── Centralized High-Performance Scroll Architecture ── */
 function initLenisAndScroll() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isMobile = window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches;
     let lenis = null;
 
     // Cache elements to avoid querying DOM during scroll
@@ -367,14 +349,16 @@ function initLenisAndScroll() {
     const stream = document.getElementById('neuralStream');
     const spark = document.getElementById('neuralSpark');
     const s1 = document.querySelector('.stars-1'), s2 = document.querySelector('.stars-2'), s3 = document.querySelector('.stars-3'), nebula = document.querySelector('.nebula');
-    const titles = document.querySelectorAll('.sec-title');
+    
+    // Convert NodeList to Array and filter out items outside the layout flow to save computation
+    let titles = Array.from(document.querySelectorAll('.sec-title'));
 
     function updateScroll(scrollY) {
         // Nav Background
         if(nav) nav.classList.toggle('scrolled', scrollY > 40);
         
         // Neural Stream Tracking
-        if(stream && spark) {
+        if(stream && spark && !isMobile) {
             const docHeight = document.body.scrollHeight - window.innerHeight;
             const scrolled = Math.max(0, Math.min(1, scrollY / docHeight));
             const maxScroll = stream.offsetHeight - spark.offsetHeight;
@@ -383,22 +367,32 @@ function initLenisAndScroll() {
 
         if (prefersReducedMotion) return;
 
-        // Cinematic Deep Space Parallax
-        if(s1) s1.style.transform = `translateY(${scrollY * -0.05}px)`;
-        if(s2) s2.style.transform = `translateY(${scrollY * -0.1}px)`;
-        if(s3) s3.style.transform = `translateY(${scrollY * -0.15}px)`;
-        if(nebula) nebula.style.transform = `translateY(${scrollY * -0.03}px) scale(1.1)`;
-        
-        titles.forEach(title => {
-            const rect = title.getBoundingClientRect();
-            if(rect.top < window.innerHeight && rect.bottom > 0) {
-                const distance = window.innerHeight - rect.top;
-                title.style.transform = `translateY(${distance * -0.04}px)`;
-            }
-        });
+        // Cinematic Deep Space Parallax (Disable on mobile)
+        if(!isMobile) {
+            if(s1) s1.style.transform = `translateY(${scrollY * -0.05}px)`;
+            if(s2) s2.style.transform = `translateY(${scrollY * -0.1}px)`;
+            if(s3) s3.style.transform = `translateY(${scrollY * -0.15}px)`;
+            if(nebula) nebula.style.transform = `translateY(${scrollY * -0.03}px) scale(1.1)`;
+            
+            titles.forEach(title => {
+                const rect = title.getBoundingClientRect();
+                if(rect.top < window.innerHeight && rect.bottom > 0) {
+                    const distance = window.innerHeight - rect.top;
+                    title.style.transform = `translateY(${distance * -0.04}px)`;
+                }
+            });
+        }
     }
 
-    if (!prefersReducedMotion && typeof Lenis !== 'undefined') {
+    // Single Master RAF Loop
+    function masterRaf(time) {
+        if (lenis) lenis.raf(time);
+        if (particleUpdateFn) particleUpdateFn();
+        if (cursorUpdateFn) cursorUpdateFn();
+        requestAnimationFrame(masterRaf);
+    }
+
+    if (!prefersReducedMotion && !isMobile && typeof Lenis !== 'undefined') {
         lenis = new Lenis({
             duration: 1.2,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -414,14 +408,8 @@ function initLenisAndScroll() {
         lenis.on('scroll', (e) => {
             updateScroll(e.scroll);
         });
-
-        function raf(time) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
-        requestAnimationFrame(raf);
     } else {
-        // Fallback to Native Scroll (still optimized)
+        // Fallback to Native Scroll 
         let tick = false;
         window.addEventListener('scroll', () => {
             if(!tick) {
@@ -433,6 +421,8 @@ function initLenisAndScroll() {
             }
         }, {passive: true});
     }
+    
+    requestAnimationFrame(masterRaf);
 
     // Anchor Links setup (with Lenis if available, else native)
     document.querySelectorAll('a[href^="#"]').forEach(a => {
