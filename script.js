@@ -27,28 +27,17 @@ const ldInterval = setInterval(() => {
 }, 60);
 
 function init(){
-    const IS_MOBILE = window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches;
-    
-    // Core logic that runs everywhere
+    particles();
+    scrollReveal();
     mobileMenu();
+    countUp();
+    projGlow();
+    customCursor();
+    magneticElements();
+    tiltCards();
     dropDowns();
-    
-    if (!IS_MOBILE) {
-        particles();
-        scrollReveal();
-        countUp();
-        projGlow();
-        customCursor();
-        magneticElements();
-        tiltCards();
-        generateStars();
-        initLenisAndScroll();
-    } else {
-        // Emergency Ultra-Light Mobile Scroll (Nav Only)
-        initMobileScroll();
-        // Fallback for counters
-        document.querySelectorAll('[data-count]').forEach(el => el.textContent = el.dataset.count);
-    }
+    generateStars();
+    initLenisAndScroll();
 }
 
 /* ── Particles ── */
@@ -453,33 +442,6 @@ function initLenisAndScroll() {
     // Run once on load
     updateScroll(window.scrollY);
     window.addEventListener('resize', () => updateScroll(window.scrollY));
-}
-
-/* ── Ultra-Light Mobile Scroll ── */
-function initMobileScroll() {
-    const nav = document.getElementById('nav');
-    if (!nav) return;
-    let tick = false;
-    window.addEventListener('scroll', () => {
-        if (!tick) {
-            requestAnimationFrame(() => {
-                nav.classList.toggle('scrolled', window.scrollY > 40);
-                tick = false;
-            });
-            tick = true;
-        }
-    }, {passive: true});
-
-    // Anchor Links for Mobile
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-        a.addEventListener('click', e => {
-            const target = document.querySelector(a.getAttribute('href'));
-            if(target) {
-                e.preventDefault();
-                target.scrollIntoView({behavior:'smooth',block:'start'});
-            }
-        });
-    });
 }
 
 })();

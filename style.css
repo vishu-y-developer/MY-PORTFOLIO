@@ -286,20 +286,6 @@ footer{padding:2.5rem 0;border-top:1px solid var(--border)}
         z-index: -2;
         pointer-events: none;
     }
-
-    /* Emergency Ultra-Light Overrides */
-    * { animation: none !important; backdrop-filter: none !important; }
-    nav { background: rgba(10,10,10,0.95) !important; }
-    
-    .card, .stat, .proj, .srv-card, .cc, .gh-card, .li-card, .btn-fill, .btn-glass, .btn-li { 
-        box-shadow: none !important; 
-        transform: none !important; 
-    }
-    .card:active, .proj:active, .srv-card:active, .btn-fill:active, .btn-glass:active { 
-        transform: scale(0.98) !important; 
-    }
-    
-    .sr, .fade-in { opacity: 1 !important; transform: none !important; transition: none !important; }
 }
 @media(max-width:480px){
     .sec-title{font-size:clamp(1.75rem,8vw,2.2rem)}
