@@ -34,7 +34,6 @@ function init(){
     projGlow();
     customCursor();
     magneticElements();
-    tiltCards();
     dropDowns();
     generateStars();
     initNativeScroll();
@@ -90,10 +89,15 @@ function particles(){
     for(let i=0;i<count;i++) particles.push(new Particle());
 
     particleUpdateFn = () => {
-        if (!particlesVisible) return;
+        if (!particlesVisible) {
+            requestAnimationFrame(particleUpdateFn);
+            return;
+        }
         ctx.clearRect(0,0,width,height);
         particles.forEach(p=>p.update());
+        requestAnimationFrame(particleUpdateFn);
     };
+    particleUpdateFn();
 
     // Pause particles when hero is out of view
     const hero = document.getElementById('hero');
@@ -160,22 +164,26 @@ function countUp(){
 /* ── Project Card Glow ── */
 function projGlow(){
     document.querySelectorAll('.proj').forEach(c=>{
+        let ticking = false;
         c.addEventListener('mousemove',e=>{
-            const r=c.getBoundingClientRect();
-            c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');
-            c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%');
-        });
+            if(!ticking){
+                requestAnimationFrame(() => {
+                    const r=c.getBoundingClientRect();
+                    c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');
+                    c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%');
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, {passive: true});
     });
 }
 
 /* ── Premium Enhancements ── */
 
-/* 1. Custom Cursor */
-let cursorUpdateFn = null;
-
+/* 1. Custom Cursor (Optimized JS Lerp) */
 function customCursor() {
-    // Disable entirely on mobile
-    if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768) return;
 
     const dot = document.getElementById('cursorDot');
     const ring = document.getElementById('cursorRing');
@@ -185,103 +193,74 @@ function customCursor() {
     let mouseY = window.innerHeight / 2;
     let ringX = mouseX;
     let ringY = mouseY;
+    let dotTicking = false;
+    let isRingMoving = false;
 
     window.addEventListener('mousemove', (e) => {
         mouseX = e.clientX;
         mouseY = e.clientY;
-        document.body.style.setProperty('--cx', mouseX + 'px');
-        document.body.style.setProperty('--cy', mouseY + 'px');
-    });
+        
+        if(!dotTicking) {
+            requestAnimationFrame(() => {
+                document.body.style.setProperty('--cx', mouseX + 'px');
+                document.body.style.setProperty('--cy', mouseY + 'px');
+                dotTicking = false;
+            });
+            dotTicking = true;
+        }
+        
+        // Wake up the ring animation loop if it's sleeping
+        if(!isRingMoving) {
+            isRingMoving = true;
+            updateRing();
+        }
+    }, {passive: true});
+    
+    function updateRing() {
+        const dx = mouseX - ringX;
+        const dy = mouseY - ringY;
+        
+        // Only run math if the ring hasn't caught up to the mouse
+        if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+            ringX += dx * 0.25;
+            ringY += dy * 0.25;
+            document.body.style.setProperty('--rx', ringX + 'px');
+            document.body.style.setProperty('--ry', ringY + 'px');
+            requestAnimationFrame(updateRing);
+        } else {
+            isRingMoving = false; // Sleep to save CPU
+        }
+    }
 
-    cursorUpdateFn = () => {
-        ringX += (mouseX - ringX) * 0.25;
-        ringY += (mouseY - ringY) * 0.25;
-        document.body.style.setProperty('--rx', ringX + 'px');
-        document.body.style.setProperty('--ry', ringY + 'px');
-    };
-
-    // Hover state for interactive elements
     const interactives = document.querySelectorAll('a, button, .cc, .card, .proj, .srv-card, .stat, .gh-card, .li-card');
     interactives.forEach(el => {
-        el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
-        el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+        el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'), {passive: true});
+        el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'), {passive: true});
     });
 }
 
 /* 3. Magnetic Buttons */
 function magneticElements() {
-    // Buttons to apply magnetic effect
     const magnetics = document.querySelectorAll('.btn-fill, .btn-glass, .btn-li, .theme-btn');
     
     magnetics.forEach(el => {
-        el.addEventListener('mousemove', function(e) {
-            const rect = el.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            
-            // Limit the movement
-            el.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
-        });
-        
-        el.addEventListener('mouseleave', function() {
-            el.style.transform = `translate(0px, 0px)`;
-        });
-    });
-}
-
-/* 4. Premium 3D Tilt Effect for Cards */
-function tiltCards() {
-    // Disable heavy 3D tilt on mobile devices
-    if (window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches) return;
-
-    const cards = document.querySelectorAll('.card, .srv-card, .proj, .gh-card, .li-card, .stat, .cc');
-    
-    cards.forEach(card => {
-        let isHovered = false;
-        let x = 0, y = 0;
         let ticking = false;
-        
-        card.addEventListener('mouseenter', () => {
-            isHovered = true;
-            card.style.transition = 'transform 0.1s ease-out, box-shadow 0.3s ease';
-        });
-        
-        card.addEventListener('mousemove', (e) => {
-            if(!isHovered) return;
-            const rect = card.getBoundingClientRect();
-            x = e.clientX - rect.left;
-            y = e.clientY - rect.top;
-            
+        el.addEventListener('mousemove', function(e) {
             if(!ticking) {
                 requestAnimationFrame(() => {
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-                    
-                    // Subtle 3D rotation (max 3 degrees for performance)
-                    const rotateX = ((y - centerY) / centerY) * -3; 
-                    const rotateY = ((x - centerX) / centerX) * 3;  
-                    
-                    if(card.classList.contains('proj') || card.classList.contains('card')) {
-                        card.style.setProperty('--mx', (x / rect.width * 100) + '%');
-                        card.style.setProperty('--my', (y / rect.height * 100) + '%');
-                    }
-                    
-                    card.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+                    const rect = el.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    el.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
                     ticking = false;
                 });
                 ticking = true;
             }
-        });
+        }, {passive: true});
         
-        card.addEventListener('mouseleave', () => {
-            isHovered = false;
-            card.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease';
-            card.style.transform = `perspective(1200px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
-            if(card.classList.contains('proj') || card.classList.contains('card')) {
-                card.style.setProperty('--mx', '50%');
-                card.style.setProperty('--my', '50%');
-            }
-        });
+        el.addEventListener('mouseleave', function() {
+            el.style.transform = `translate(0px, 0px)`;
+        }, {passive: true});
     });
 }
 
@@ -408,17 +387,9 @@ function initNativeScroll() {
         });
     });
 
-    // Master RAF Loop strictly for continuous background animations (no scroll blocking)
-    function masterRaf() {
-        if (particleUpdateFn) particleUpdateFn();
-        if (cursorUpdateFn) cursorUpdateFn();
-        requestAnimationFrame(masterRaf);
-    }
-    requestAnimationFrame(masterRaf);
-
     // Run once on load
     updateScroll();
-    window.addEventListener('resize', updateScroll);
+    window.addEventListener('resize', updateScroll, {passive: true});
 }
 
 })();
