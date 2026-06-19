@@ -37,7 +37,7 @@ function init(){
     tiltCards();
     dropDowns();
     generateStars();
-    initLenisAndScroll();
+    initNativeScroll();
 }
 
 /* ── Particles ── */
@@ -338,11 +338,10 @@ function generateStars() {
 
 /* ── Util ── */
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
-/* ── Centralized High-Performance Scroll Architecture ── */
-function initLenisAndScroll() {
+/* ── Centralized Native Scroll Architecture ── */
+function initNativeScroll() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isMobile = window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches;
-    let lenis = null;
 
     // Cache elements to avoid querying DOM during scroll
     const nav = document.getElementById('nav');
@@ -353,7 +352,9 @@ function initLenisAndScroll() {
     // Convert NodeList to Array and filter out items outside the layout flow to save computation
     let titles = Array.from(document.querySelectorAll('.sec-title'));
 
-    function updateScroll(scrollY) {
+    function updateScroll() {
+        const scrollY = window.scrollY;
+
         // Nav Background
         if(nav) nav.classList.toggle('scrolled', scrollY > 40);
         
@@ -384,64 +385,40 @@ function initLenisAndScroll() {
         }
     }
 
-    // Single Master RAF Loop
-    function masterRaf(time) {
-        if (lenis) lenis.raf(time);
-        if (particleUpdateFn) particleUpdateFn();
-        if (cursorUpdateFn) cursorUpdateFn();
-        requestAnimationFrame(masterRaf);
-    }
+    // Pure Native Scroll Listener
+    let tick = false;
+    window.addEventListener('scroll', () => {
+        if(!tick) {
+            requestAnimationFrame(() => {
+                updateScroll();
+                tick = false;
+            });
+            tick = true;
+        }
+    }, {passive: true});
 
-    if (!prefersReducedMotion && !isMobile && typeof Lenis !== 'undefined') {
-        lenis = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            direction: 'vertical',
-            gestureDirection: 'vertical',
-            smooth: true,
-            mouseMultiplier: 1,
-            smoothTouch: false,
-            touchMultiplier: 2,
-            infinite: false,
-        });
-
-        lenis.on('scroll', (e) => {
-            updateScroll(e.scroll);
-        });
-    } else {
-        // Fallback to Native Scroll 
-        let tick = false;
-        window.addEventListener('scroll', () => {
-            if(!tick) {
-                requestAnimationFrame(() => {
-                    updateScroll(window.scrollY);
-                    tick = false;
-                });
-                tick = true;
-            }
-        }, {passive: true});
-    }
-    
-    requestAnimationFrame(masterRaf);
-
-    // Anchor Links setup (with Lenis if available, else native)
+    // Native Anchor Links Smooth Scroll
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', e => {
             const target = document.querySelector(a.getAttribute('href'));
             if(target) {
                 e.preventDefault();
-                if(lenis) {
-                    lenis.scrollTo(target, { offset: -60, duration: 1.2 });
-                } else {
-                    target.scrollIntoView({behavior:'smooth',block:'start'});
-                }
+                target.scrollIntoView({behavior:'smooth',block:'start'});
             }
         });
     });
 
+    // Master RAF Loop strictly for continuous background animations (no scroll blocking)
+    function masterRaf() {
+        if (particleUpdateFn) particleUpdateFn();
+        if (cursorUpdateFn) cursorUpdateFn();
+        requestAnimationFrame(masterRaf);
+    }
+    requestAnimationFrame(masterRaf);
+
     // Run once on load
-    updateScroll(window.scrollY);
-    window.addEventListener('resize', () => updateScroll(window.scrollY));
+    updateScroll();
+    window.addEventListener('resize', updateScroll);
 }
 
 })();
