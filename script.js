@@ -159,11 +159,17 @@ function countUp(){
 
 /* ── Project Card Glow ── */
 function projGlow(){
-    document.querySelectorAll('.proj').forEach(c=>{
-        c.addEventListener('mousemove',e=>{
-            const r=c.getBoundingClientRect();
-            c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');
-            c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%');
+    if (window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches) return;
+    const projs=document.querySelectorAll('.proj');
+    projs.forEach(el=>{
+        let rect;
+        el.addEventListener('mouseenter', () => { rect = el.getBoundingClientRect(); });
+        el.addEventListener('mousemove',e=>{
+            if(!rect) rect = el.getBoundingClientRect();
+            const x=e.clientX-rect.left;
+            const y=e.clientY-rect.top;
+            el.style.setProperty('--mouseX',x+'px');
+            el.style.setProperty('--mouseY',y+'px');
         });
     });
 }
@@ -214,16 +220,30 @@ function magneticElements() {
     const magnetics = document.querySelectorAll('.btn-fill, .btn-glass, .btn-li, .theme-btn');
     
     magnetics.forEach(el => {
+        let rect = null;
+        let centerX = 0, centerY = 0;
+        
+        el.addEventListener('mouseenter', () => {
+            rect = el.getBoundingClientRect();
+            centerX = rect.width / 2;
+            centerY = rect.height / 2;
+        });
+
         el.addEventListener('mousemove', function(e) {
-            const rect = el.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
+            if(!rect) {
+                rect = el.getBoundingClientRect();
+                centerX = rect.width / 2;
+                centerY = rect.height / 2;
+            }
+            const x = e.clientX - rect.left - centerX;
+            const y = e.clientY - rect.top - centerY;
             
             // Limit the movement
             el.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
         });
         
         el.addEventListener('mouseleave', function() {
+            rect = null;
             el.style.transform = `translate(0px, 0px)`;
         });
     });
@@ -240,23 +260,29 @@ function tiltCards() {
         let isHovered = false;
         let x = 0, y = 0;
         let ticking = false;
+        let rect = null;
+        let centerX = 0, centerY = 0;
         
         card.addEventListener('mouseenter', () => {
             isHovered = true;
+            rect = card.getBoundingClientRect();
+            centerX = rect.width / 2;
+            centerY = rect.height / 2;
             card.style.transition = 'transform 0.1s ease-out, box-shadow 0.3s ease';
         });
         
         card.addEventListener('mousemove', (e) => {
             if(!isHovered) return;
-            const rect = card.getBoundingClientRect();
+            if(!rect) {
+                rect = card.getBoundingClientRect();
+                centerX = rect.width / 2;
+                centerY = rect.height / 2;
+            }
             x = e.clientX - rect.left;
             y = e.clientY - rect.top;
             
             if(!ticking) {
                 requestAnimationFrame(() => {
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-                    
                     // Subtle 3D rotation (max 3 degrees for performance)
                     const rotateX = ((y - centerY) / centerY) * -3; 
                     const rotateY = ((x - centerX) / centerX) * 3;  
@@ -275,6 +301,7 @@ function tiltCards() {
         
         card.addEventListener('mouseleave', () => {
             isHovered = false;
+            rect = null;
             card.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease';
             card.style.transform = `perspective(1200px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
             if(card.classList.contains('proj') || card.classList.contains('card')) {
@@ -350,8 +377,14 @@ function initLenisAndScroll() {
     const spark = document.getElementById('neuralSpark');
     const s1 = document.querySelector('.stars-1'), s2 = document.querySelector('.stars-2'), s3 = document.querySelector('.stars-3'), nebula = document.querySelector('.nebula');
     
-    // Convert NodeList to Array and filter out items outside the layout flow to save computation
-    let titles = Array.from(document.querySelectorAll('.sec-title'));
+    // Cache layout values to prevent thrashing
+    let docHeight = document.body.scrollHeight - window.innerHeight;
+    let maxScroll = (stream && spark) ? stream.offsetHeight - spark.offsetHeight : 0;
+    
+    window.addEventListener('resize', () => {
+        docHeight = document.body.scrollHeight - window.innerHeight;
+        maxScroll = (stream && spark) ? stream.offsetHeight - spark.offsetHeight : 0;
+    });
 
     function updateScroll(scrollY) {
         // Nav Background
@@ -359,9 +392,7 @@ function initLenisAndScroll() {
         
         // Neural Stream Tracking
         if(stream && spark && !isMobile) {
-            const docHeight = document.body.scrollHeight - window.innerHeight;
             const scrolled = Math.max(0, Math.min(1, scrollY / docHeight));
-            const maxScroll = stream.offsetHeight - spark.offsetHeight;
             spark.style.transform = `translateX(-50%) translateY(${scrolled * maxScroll}px)`;
         }
 
@@ -373,14 +404,7 @@ function initLenisAndScroll() {
             if(s2) s2.style.transform = `translateY(${scrollY * -0.1}px)`;
             if(s3) s3.style.transform = `translateY(${scrollY * -0.15}px)`;
             if(nebula) nebula.style.transform = `translateY(${scrollY * -0.03}px) scale(1.1)`;
-            
-            titles.forEach(title => {
-                const rect = title.getBoundingClientRect();
-                if(rect.top < window.innerHeight && rect.bottom > 0) {
-                    const distance = window.innerHeight - rect.top;
-                    title.style.transform = `translateY(${distance * -0.04}px)`;
-                }
-            });
+            // Title parallax removed for maximum scroll performance
         }
     }
 
