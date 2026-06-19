@@ -27,40 +27,17 @@ const ldInterval = setInterval(() => {
 }, 60);
 
 function init(){
-    const IS_MOBILE = window.innerWidth < 768 || window.matchMedia('(pointer: coarse)').matches;
-    
-    // Core logic that runs everywhere
-    mobileMenu();
-    dropDowns();
-    initTouchEffects();
     particles();
+    scrollReveal();
+    mobileMenu();
+    countUp();
+    projGlow();
+    customCursor();
+    magneticElements();
+    tiltCards();
+    dropDowns();
     generateStars();
-    
-    if (!IS_MOBILE) {
-        scrollReveal();
-        countUp();
-        projGlow();
-        customCursor();
-        magneticElements();
-        tiltCards();
-        initLenisAndScroll();
-    } else {
-        // Fallbacks for mobile
-        scrollReveal(); // Let's enable scrollReveal on mobile too
-        countUp(); // Enable countUp on mobile
-        
-        const nav = document.getElementById('nav');
-        let tick = false;
-        window.addEventListener('scroll', () => {
-            if (!tick) {
-                requestAnimationFrame(() => {
-                    if(nav) nav.classList.toggle('scrolled', window.scrollY > 40);
-                    tick = false;
-                });
-                tick = true;
-            }
-        }, {passive: true});
-    }
+    initLenisAndScroll();
 }
 
 /* ── Particles ── */
@@ -158,20 +135,6 @@ function mobileMenu(){
     menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
         btn.classList.remove('on');menu.classList.remove('open');document.body.style.overflow='';
     }));
-}
-
-/* ── Mobile Touch Ripple ── */
-function initTouchEffects() {
-    if (!window.matchMedia('(pointer: coarse)').matches) return;
-    document.addEventListener('touchstart', (e) => {
-        const touch = e.touches[0];
-        const ripple = document.createElement('div');
-        ripple.className = 'touch-ripple';
-        ripple.style.left = touch.clientX + 'px';
-        ripple.style.top = touch.clientY + 'px';
-        document.body.appendChild(ripple);
-        setTimeout(() => ripple.remove(), 600);
-    }, {passive: true});
 }
 
 /* ── Count Up ── */
